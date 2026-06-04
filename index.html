@@ -3,84 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مُولّد رموز QR</title>
+    <title>مُولّد رموز QR المطور</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .container {
             background-color: white;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
             text-align: center;
-            max-width: 400px;
+            max-width: 450px;
             width: 100%;
         }
-        h1 { color: #333; margin-bottom: 20px; }
-        input {
-            width: 90%;
+        h1 { color: #2c3e50; margin-bottom: 20px; font-size: 24px; }
+        input[type="text"] {
+            width: 100%;
             padding: 12px;
             margin-bottom: 20px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
             font-size: 16px;
             outline: none;
             transition: border-color 0.3s;
+            box-sizing: border-box;
         }
-        input:focus { border-color: #5c67f2; }
-        button {
-            background-color: #5c67f2;
+        input[type="text"]:focus { border-color: #3498db; }
+        
+        .control-panel {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .color-picker-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            color: #555;
+        }
+        input[type="color"] {
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .btn {
             color: white;
             border: none;
             padding: 12px 25px;
             font-size: 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            width: 96%;
-            transition: background 0.3s;
+            width: 100%;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
         }
-        button:hover { background-color: #4a55d4; }
+        .btn-generate { background-color: #3498db; margin-bottom: 10px; }
+        .btn-generate:hover { background-color: #2980b9; }
+        
+        .btn-download { background-color: #2ecc71; display: none; margin-top: 15px; }
+        .btn-download:hover { background-color: #27ae60; }
+
         #qr-result { margin-top: 25px; display: none; }
-        #qr-result img { max-width: 100%; height: auto; border: 1px solid #eee; padding: 10px; background: #fff; }
+        #qr-result img { max-width: 200px; height: auto; border: 2px solid #f0f0f0; padding: 10px; background: #fff; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>مُولّد الـ QR Code</h1>
-    <p>أدخل الرابط أو النص الذي تريد تحويله:</p>
-    <input type="text" id="qr-text" placeholder="اكتب الرابط هنا... (مثال: https://google.com)">
-    <button onclick="generateQR()">إنشاء رمز QR</button>
+    <h1>مُولّد الـ QR Code الاحترافي</h1>
+    
+    <input type="text" id="qr-text" placeholder="أدخل الرابط أو النص هنا...">
+    
+    <div class="control-panel">
+        <div class="color-picker-group">
+            <label for="fg-color">لون الرمز</label>
+            <input type="color" id="fg-color" value="#000000">
+        </div>
+        <div class="color-picker-group">
+            <label for="bg-color">لون الخلفية</label>
+            <input type="color" id="bg-color" value="#ffffff">
+        </div>
+    </div>
+
+    <button class="btn btn-generate" onclick="generateQR()">إنشاء رمز QR</button>
 
     <div id="qr-result">
         <h3>الرمز الخاص بك جاهز:</h3>
         <img src="" id="qr-image" alt="QR Code">
+        <button class="btn btn-download" id="download-btn" onclick="downloadQR()">تحميل الصورة (PNG)</button>
     </div>
 </div>
 
 <script>
+    let currentQrUrl = '';
+
     function generateQR() {
         const qrText = document.getElementById('qr-text').value;
         const qrResult = document.getElementById('qr-result');
         const qrImage = document.getElementById('qr-image');
+        const downloadBtn = document.getElementById('download-btn');
+        
+        // جلب الألوان وحذف علامة # لتمريرها للـ API
+        const fgColor = document.getElementById('fg-color').value.replace('#', '');
+        const bgColor = document.getElementById('bg-color').value.replace('#', '');
 
         if (qrText.trim() === '') {
             alert('من فضلك أدخل نصاً أو رابطاً أولاً!');
             return;
         }
 
-        // استخدام API مجاني لتوليد الكود
-        const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrText)}`;
+        // رابط الـ API مع دعم الألوان وحجم أكبر للتحميل بدقة عالية (300x300)
+        currentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrText)}&color=${fgColor}&bgcolor=${bgColor}`;
         
-        qrImage.src = apiUrl;
+        qrImage.src = currentQrUrl;
         qrResult.style.display = 'block';
+        downloadBtn.style.display = 'block';
+    }
+
+    // دالة تحميل الصورة وتخطي قيود الحماية للمتصفح
+    async function downloadQR() {
+        if (!currentQrUrl) return;
+        
+        try {
+            const response = await fetch(currentQrUrl);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = 'my-qrcode.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            alert('عذراً، حدث خطأ أثناء محاولة تحميل الصورة.');
+        }
     }
 </script>
 
